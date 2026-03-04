@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地震學 Master Pro - 從 0 到 1 的專業筆記</title>
+    <title>地震學 Master Pro - 從 0 到 1 專業筆記</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM CDN -->
@@ -14,6 +14,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        /* CSS 動畫引擎：定義所有關鍵幀 */
         @keyframes waveP { 0%, 100% { transform: translateX(0); opacity: 0.4; } 50% { transform: translateX(15px); opacity: 1; } }
         @keyframes waveS { 0%, 100% { transform: translateY(-20px); } 50% { transform: translateY(20px); } }
         @keyframes waveR { 0% { transform: translate(0, 0); } 25% { transform: translate(12px, -12px); } 50% { transform: translate(0, 0); } 75% { transform: translate(-12px, 12px); } 100% { transform: translate(0, 0); } }
@@ -30,9 +31,9 @@
         
         .scrollbar-thin::-webkit-scrollbar { width: 6px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        body { background-color: #f8fafc; font-family: sans-serif; }
+        body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     </style>
 </head>
 <body>
@@ -41,17 +42,196 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // 修復後的圖示組件，使用 ref 避免 React 與 Lucide DOM 操作衝突
+        // --- 1. 基礎輔助組件 ---
         const Icon = ({ name, size = 18, className = "" }) => {
-            const iconRef = useRef(null);
             useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
+                if (window.lucide) { window.lucide.createIcons(); }
             }, [name]);
-            return <i key={name} data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+            return <span className="inline-flex items-center justify-center"><i key={name} data-lucide={name} style={{ width: size, height: size }} className={className}></i></span>;
         };
 
+        const WaveProp = ({ type }) => {
+            const cols = 22;
+            const rows = 6;
+            let name = type === 'p' ? "waveP" : type === 's' ? "waveS" : "waveR";
+            let duration = type === 's' ? '1.8s' : '1.2s';
+            return (
+                <div className="w-full">
+                    <svg width="100%" height="180" viewBox="0 0 600 180" className="mx-auto overflow-visible">
+                        {[...Array(cols)].map((_, i) => (
+                            [...Array(rows)].map((_, j) => (
+                                <circle 
+                                    key={`${i}-${j}`} 
+                                    cx={50 + i * 24} cy={35 + j * 24} 
+                                    r={j === 0 ? 5 : 2.5} 
+                                    fill={type === 'p' ? '#10b981' : type === 's' ? '#f87171' : '#60a5fa'} 
+                                    opacity={1 - j * 0.15}
+                                    style={{ 
+                                        animationName: name,
+                                        animationDuration: duration,
+                                        animationIterationCount: 'infinite',
+                                        animationTimingFunction: 'ease-in-out',
+                                        animationDelay: `${i * 0.15}s` 
+                                    }}
+                                />
+                            ))
+                        ))}
+                    </svg>
+                </div>
+            );
+        };
+
+        // --- 2. 各章節模擬引擎組件 ---
+        const VisualSim = ({ type, waveType, setWaveType }) => {
+            switch (type) {
+                case 'spirit': return (
+                    <div className="relative w-64 h-64 bg-slate-800 rounded-full flex items-center justify-center border-4 border-slate-700 shadow-xl">
+                        <div className="absolute inset-2 border-2 border-dashed border-emerald-500/20 rounded-full animate-[spirit-rotate_20s_linear_infinite]"></div>
+                        <div className="text-emerald-400 animate-[float-y_4s_ease-in-out_infinite]"><Icon name="globe" size={100} /></div>
+                    </div>
+                );
+                case 'wave_dynamic': return (
+                    <div className="w-full flex flex-col items-center">
+                        <WaveProp type={waveType} />
+                        <div className="flex gap-4 mt-8 bg-slate-800/80 p-2 rounded-full border border-slate-700 shadow-2xl">
+                            {['p', 's', 'rayleigh'].map(t => (
+                                <button key={t} onClick={() => setWaveType(t)} className={`px-6 py-1.5 rounded-full text-[9px] font-black uppercase transition-all ${waveType === t ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t}</button>
+                            ))}
+                        </div>
+                    </div>
+                );
+                case 'smr_flow': return (
+                    <div className="flex items-center gap-12 relative">
+                        <div className="flex flex-col items-center gap-3"><div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="zap" className="text-white"/></div><span className="text-[10px] text-slate-400 font-black">SOURCE</span></div>
+                        <div className="w-24 h-1 bg-slate-700 relative overflow-hidden rounded-full"><div className="absolute h-full w-full bg-emerald-500 animate-[scan-line_2s_linear_infinite]"></div></div>
+                        <div className="flex flex-col items-center gap-3"><div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="layers" className="text-white"/></div><span className="text-[10px] text-slate-400 font-black">MEDIUM</span></div>
+                        <div className="w-24 h-1 bg-slate-700 relative overflow-hidden rounded-full"><div className="absolute h-full w-full bg-blue-500 animate-[scan-line_2s_linear_infinite_1s]"></div></div>
+                        <div className="flex flex-col items-center gap-3"><div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="activity" className="text-white"/></div><span className="text-[10px] text-slate-400 font-black">RECEIVER</span></div>
+                    </div>
+                );
+                case 'depth_compare': return (
+                    <div className="flex items-center gap-12">
+                        <div className="h-64 w-10 bg-slate-800 rounded-full relative border-4 border-slate-700 overflow-hidden shadow-inner">
+                            <div className="absolute top-0 w-full h-[6%] bg-orange-500"></div>
+                            <div className="absolute top-[3%] left-1/2 -translate-x-1/2 w-0.5 h-14 bg-white shadow-[0_0_10px_white] animate-[drill-drill_2s_ease-in-out_infinite]"></div>
+                            <div className="absolute bottom-2 left-0 w-full text-center text-[7px] text-slate-500 font-black">6371KM</div>
+                        </div>
+                        <div className="space-y-4 text-left">
+                            <div className="flex items-center gap-3"><div className="w-4 h-4 bg-orange-500 rounded shadow-lg"></div><span className="text-xs text-slate-200 font-black uppercase tracking-widest">Physical Limit</span></div>
+                            <div className="flex items-center gap-3"><div className="w-4 h-4 bg-emerald-500 rounded shadow-[0_0_10px_#10b981] animate-pulse"></div><span className="text-xs text-emerald-400 font-black uppercase tracking-widest">Wave Probing</span></div>
+                        </div>
+                    </div>
+                );
+                case 'inversion_box': return (
+                    <div className="w-56 h-56 bg-slate-800 rounded-[2.5rem] border-4 border-dashed border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
+                        <div className="text-emerald-500 animate-[float-y_4s_ease-in-out_infinite]"><Icon name="binary" size={80} /></div>
+                        <div className="absolute top-4 left-4 bg-slate-900/80 px-2 py-1 rounded text-[7px] text-slate-500 font-black uppercase">Observed Signal</div>
+                        <div className="absolute bottom-4 right-4 bg-emerald-900/50 px-2 py-1 rounded text-[7px] text-emerald-400 font-black border border-emerald-500/20 uppercase">Structural Model</div>
+                    </div>
+                );
+                case 'hazard_bell': return (
+                    <svg width="400" height="200" viewBox="0 0 400 200">
+                        <path d="M20 180 Q 200 20, 380 180" fill="none" stroke="#f87171" strokeWidth="4" strokeDasharray="10 5" className="animate-[dash-flow_5s_linear_infinite]" />
+                        <line x1="200" y1="180" x2="200" y2="40" stroke="#fff" strokeWidth="2" strokeDasharray="3 3" opacity="0.4" />
+                        <circle cx="200" cy="180" r="5" fill="#fff" />
+                        <text x="210" y="60" fill="#f87171" fontSize="12" fontWeight="black" className="animate-[float-y_2s_ease-in-out_infinite]">PEAK PGA PROBABILITY</text>
+                        <rect x="0" y="180" width="400" height="2" fill="#334155" />
+                    </svg>
+                );
+                case 'risk_balance': return (
+                    <div className="flex flex-col items-center gap-10 animate-[sway-anim_4s_ease-in-out_infinite]">
+                        <svg width="320" height="120" viewBox="0 0 320 120">
+                            <line x1="20" y1="90" x2="300" y2="90" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
+                            <rect x="30" y="40" width="90" height="50" fill="#ef4444" rx="15" />
+                            <text x="45" y="70" fill="#fff" fontSize="11" fontWeight="black">HAZARD</text>
+                            <rect x="200" y="40" width="90" height="50" fill="#10b981" rx="15" />
+                            <text x="205" y="70" fill="#fff" fontSize="9" fontWeight="black">MITIGATION</text>
+                            <circle cx="160" cy="90" r="12" fill="#475569" />
+                        </svg>
+                    </div>
+                );
+                case 'engineering_shake': return (
+                    <div className="flex flex-col items-center gap-8">
+                        <div className="relative w-24 h-48 border-x-4 border-t-4 border-slate-600 rounded-t-3xl bg-slate-800/30 flex items-center justify-center animate-[sway-anim_1.2s_ease-in-out_infinite]" style={{ transformOrigin: 'bottom' }}>
+                            <div className="w-16 h-0.5 bg-slate-700 rounded-full opacity-30"></div>
+                            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                                <line x1="0" y1="30" x2="100" y2="30" stroke="#10b981" strokeWidth="2" opacity="0.3" />
+                            </svg>
+                        </div>
+                        <div className="w-48 h-3 bg-slate-700 rounded-full shadow-inner animate-pulse"></div>
+                        <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Resilience Modeling</p>
+                    </div>
+                );
+                case 'liquefaction_sim': return (
+                    <div className="flex flex-col items-center">
+                        <svg width="400" height="200" viewBox="0 0 400 200">
+                            <rect x="50" y="50" width="300" height="130" fill="#451a03" opacity="0.2" rx="25" />
+                            {[...Array(80)].map((_, i) => (
+                                <circle key={i} cx={75 + (i%16)*18} cy={70 + Math.floor(i/16)*22} r={4} fill="#fbbf24" className="animate-[sand-shimmer_1.5s_ease-in-out_infinite]" style={{ animationDelay: `${Math.random() * 2}s` }} />
+                            ))}
+                            <g className="animate-[house-collapse_3s_ease-in-out_infinite]" style={{ transformOrigin: '200px 100px' }}>
+                                <rect x="178" y="65" width="44" height="35" fill="#fff" stroke="#000" strokeWidth="2" />
+                                <path d="M178 65 L200 40 L222 65 Z" fill="#ef4444" stroke="#000" strokeWidth="2" />
+                            </g>
+                        </svg>
+                        <div className="mt-4 px-4 py-1.5 bg-amber-900/30 border border-amber-500/20 rounded-full">
+                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest underline">Effective Stress {'\u2192'} 0</p>
+                        </div>
+                    </div>
+                );
+                case 'tsunami_wall': return (
+                    <div className="relative w-80 h-40 bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-slate-700 shadow-2xl flex items-end">
+                        <div className="w-full h-full bg-blue-600/20 relative">
+                            <div className="absolute bottom-0 w-full bg-blue-500 shadow-[0_-20px_40px_rgba(59,130,246,0.4)] animate-[tide-move_4s_ease-in-out_infinite]" style={{ height: '85%', transformOrigin: 'bottom' }}>
+                                <div className="w-full h-10 bg-white/20 backdrop-blur-sm"></div>
+                            </div>
+                        </div>
+                        <div className="absolute top-8 left-10 text-white font-black text-[10px] tracking-[0.5em] uppercase opacity-40">Tsunami Energy Wall</div>
+                    </div>
+                );
+                case 'forecasting_clock': return (
+                    <div className="relative w-56 h-56 rounded-full border-8 border-slate-700 bg-slate-800 shadow-[inset_0_0_50px_rgba(0,0,0,0.6)] flex items-center justify-center overflow-hidden">
+                        <div className="absolute w-1.5 h-24 bg-emerald-500 rounded-full origin-bottom shadow-[0_0_15px_#10b981] animate-[sway-anim_12s_linear_infinite]" style={{ top: '32px' }}></div>
+                        <div className="z-10 bg-slate-900/90 p-6 rounded-[2.5rem] border border-white/10 text-center shadow-2xl">
+                            <div className="text-emerald-400 font-black text-xl leading-none">30Y / 70%</div>
+                            <div className="text-slate-500 font-bold text-[8px] uppercase tracking-widest mt-2">Probabilistic Model</div>
+                        </div>
+                    </div>
+                );
+                case 'nuclear_sim': return (
+                    <div className="w-80 h-64 bg-slate-800/80 rounded-[3.5rem] border-2 border-white/10 relative p-12 overflow-hidden shadow-2xl">
+                        <div className="absolute left-14 bottom-14 w-[75%] h-[2px] bg-slate-600"></div>
+                        <div className="absolute left-14 bottom-14 h-[75%] w-[2px] bg-slate-600"></div>
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                            <path d="M70 180 L250 50" stroke="#6366f1" strokeWidth="4" strokeDasharray="12 6" opacity="0.6" />
+                            <circle cx="110" cy="90" r="10" fill="#f87171" className="animate-pulse shadow-[0_0_20px_#f87171]" />
+                            <circle cx="210" cy="150" r="10" fill="#10b981" />
+                        </svg>
+                        <div className="absolute top-12 right-12 text-[8px] text-red-400 font-black bg-red-950/40 px-3 py-1.5 rounded-full border border-red-900/30 tracking-widest uppercase text-center">mb / Ms<br/>Discrimination</div>
+                    </div>
+                );
+                case 'ims_network': return (
+                    <div className="w-72 h-72 relative bg-slate-800 rounded-full border-4 border-slate-700 flex items-center justify-center overflow-hidden">
+                        <div className="opacity-20"><Icon name="globe" size={130} /></div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            {[...Array(4)].map((_, i) => (
+                                <svg key={i} className="absolute inset-0 w-full h-full">
+                                    <circle cx="144" cy="144" r="10" fill="none" stroke="#10b981" strokeWidth={2.5}
+                                        className="animate-[pulse-ring_4s_linear_infinite]"
+                                        style={{ animationDelay: `${i*1}s` }}
+                                    />
+                                </svg>
+                            ))}
+                        </div>
+                        <div className="absolute top-12 right-12 text-emerald-400 drop-shadow-[0_0_15px_#10b981]"><Icon name="radio" size={32} className="animate-pulse" /></div>
+                        <div className="absolute bottom-12 left-12 text-blue-400 drop-shadow-[0_0_15px_#3b82f6]"><Icon name="wind" size={32} className="animate-pulse" /></div>
+                    </div>
+                );
+                default: return null;
+            }
+        };
+
+        // --- 3. 主 App 組件 ---
         const App = () => {
             const [activePoint, setActivePoint] = useState(0);
             const [waveType, setWaveType] = useState('p');
@@ -72,10 +252,20 @@
                     icon: "waves",
                     def: "彈性波是質點受力偏離平衡後產生的波動。P波感應體積縮放，S波感應形狀剪切。",
                     why: "波動力學是解碼震源與介質的基礎語法。理解波速公式能讓我們推論地底物質的軟硬程度與相態。",
-                    logic: "科學建模基礎：波速公式 Vp = \u221A((k + 4/3\u03BC) / \u03C1) 與 Vs = \u221A(\u03BC/\u03C1)。這裡 k 是體積彈性模數，\u03BC 是剪切模數，\u03C1 是密度。P波涉及抗縮性，故傳遞效率與速度永遠大於 S波。",
+                    logic: "科學建模基礎：波速公式 Vp \u003D \u221A((k \u002B 4/3\u03BC) / \u03C1) 與 Vs \u003D \u221A(\u03BC/\u03C1)。觀察圖(一)可見地震波在內部界面發生的反射 (Reflection) 與轉換 (Conversion)。圖(二)則展示了觀測量上的物理順序：P 波最快、S 波居中、表面波最晚抵達但振幅最大。",
                     teacher: "「為何液體外核不傳 S 波？」答：流體的剪切模數 \u03BC \u003D 0（無法抵抗歪斜形變）。這現象成功界定了 2900km 深處的外核邊界，是地震學最震撼的物理發現。",
-                    taiwan: "台灣 EEW 預警系統利用 P-S 時差。403 花蓮地震時，電腦搶在強烈 S 波到達台北前發布警報，關鍵就在於對這兩者波速差異的掌握。",
-                    animationType: "wave_dynamic"
+                    taiwan: "台灣 EEW 預警系統利用 P-S 時差。403 花蓮地震時，電腦搶在強烈 S 波與高振幅表面波到達前發布警報，正是基於波速與到時理論。",
+                    animationType: "wave_dynamic",
+                    images: [
+                        {
+                            url: "https://raw.githubusercontent.com/JinJia0618/-seismology_homework2/main/%E8%9E%A2%E5%B9%95%E6%93%B7%E5%8F%96%E7%95%AB%E9%9D%A2%202026-03-04%20191952.png",
+                            caption: "圖(一)：震波路徑與射線理論。描述地震波遇到地層界面時的反射 (Reflection) 與相變轉換 (Conversion)。例如 P 波撞擊界面後可能轉換成 S 波，這讓我們能探測地球層圈的物理性質。"
+                        },
+                        {
+                            url: "https://raw.githubusercontent.com/JinJia0618/-seismology_homework2/main/%E8%9E%A2%E5%B9%95%E6%93%B7%E5%8F%96%E7%95%AB%E9%9D%A2%202026-03-04%20191355.png",
+                            caption: "圖(二)：地震圖各波相到時與振幅指紋。呈現 P 波、S 波與表面波的抵達順序。表面波因其長週期特性與能量導引作用，抵達時間最晚，但振幅能量通常最大，是致災主因。"
+                        }
+                    ]
                 },
                 {
                     title: "重點#3：基本架構——S-M-R 模型",
@@ -103,7 +293,7 @@
                     def: "利用地震圖數據（結果）反推物理模型（原因）的數學運算過程。",
                     why: "地震學的靈魂。由於無法直視地底，反演是將數據轉換為科學影像與物理參數的橋樑。",
                     logic: "科學建模基礎：反演面臨「非唯一性 (Non-uniqueness)」挑戰。多種構造組合可能產生相似波形。因此需要數學迭代優化，減少觀測值與理論值的殘差。",
-                    teacher: "「反演結果一定正確嗎？」答：不一定。受限於測站分佈（覆蓋率）與噪訊。需透過聯合多種數據（如走時 + 波形）來限制解的空間，降低不確定性。",
+                    teacher: "「反演結果一定正確嗎？」答：不一定。受限於測站分佈（覆蓋率）與噪訊。需透過聯合多種數據（如走時 \u002B 波形）來限制解的空間，降低不確定性。",
                     taiwan: "台灣 3D 震波斷層成像透過分析數十萬條路徑，反演出板塊在台灣下方的立體結構，是反演技術最成功的本土案例。",
                     animationType: "inversion_box"
                 },
@@ -112,8 +302,8 @@
                     icon: "zap",
                     def: "大自然決定的震動強度分佈，是客觀存在的能量釋放潛勢。",
                     why: "防災規畫的基礎。了解危害才知道建築抗震設計的上限值（如設計地動加速度）。",
-                    logic: "科學建模基礎：危害 (Hazard) 與人無關。即使在無人區，斷層錯動帶來的物理能量依然存在。通常以 PGA（最大地動加速度）的超越機率來描述。",
-                    teacher: "「危害強度可以改變嗎？」答：不能。它是基於構造應力與斷層特徵的自然屬性。人類只能透過觀測來「量化」它，而非像風險一樣可以去管理它。",
+                    logic: "科學建模基礎：危害 (Hazard) 與人無關。即使在無人區，斷層錯動帶來的物理能量依然存在. 通常以 PGA（最大地動加速度）的超越機率來描述。",
+                    teacher: "「危害強度可以改變嗎？」答：不能。它是基於構造應力與斷層特徵的自然屬性. 人類只能透過觀測來「量化」它，而非像風險一樣可以去管理它。",
                     taiwan: "嘉南平原與花蓮地區被列為高危害區，是因為歷史數據顯示當地發生強震的機率與預期加速度均高於其他地區。",
                     animationType: "hazard_bell"
                 },
@@ -122,9 +312,9 @@
                     icon: "shield-alert",
                     def: "災害可能導致的人財損失。風險 = 危害 × 暴露度 × 脆弱度。",
                     why: "這是減災政策的核心。危害不可控，但風險可以透過工程與管理手段來降低。",
-                    logic: "科學建模基礎：風險模型納入社會變數。若在斷層帶（高危害）蓋了醫院（高暴露），且該醫院為老舊建築（高脆弱），則該點的風險指數會極高。",
+                    logic: "科學建模基礎：風險模型納入社會變數. 若在斷層帶（高危害）蓋了醫院（高暴露），且該醫院為老舊建築（高脆弱），則該點的風險指數會極高。",
                     teacher: "「如何有效減輕風險？」答：三支箭：透過都更降低暴露、老屋加固降低脆弱度、並配合強震預警系統減少災後二次損失。",
-                    taiwan: "台北盆地的風險全台第一。儘管危害中等，但因高人口密度與老舊大樓密集，使得風險總值遠超震度更高的東部。",
+                    taiwan: "台北盆地的風險全台第一. 儘管危害中等，但因高人口密度與老舊大樓密集，使得風險總值遠超震度更高的東部。",
                     animationType: "risk_balance"
                 },
                 {
@@ -132,47 +322,47 @@
                     icon: "construction",
                     def: "研究強地動對結構的影響。宗旨：地震不殺死人，坍塌建築才會傷人。",
                     why: "工程學旨在將衝擊加速度轉化為建築可承受的彈性能，確保大震不倒、守護生命。",
-                    logic: "科學建模基礎：利用 F \u003D m \u22C5 a（牛頓第二定律）。工程師關注的是「強地動 (Strong Motion)」，旨在讓結構在特定頻率範圍內具備足夠的阻尼與耐力。",
+                    logic: "科學建模基礎：利用 F \u003D m \u22C5 a（牛頓第二定律）。工程師關注的是「強地動 (Strong Motion)」，旨在讓結構在特定頻率範圍內具備阻尼與耐力。",
                     teacher: "「反應譜 (Response Spectrum) 的用途？」答：它描述不同高度（頻率）建築在同一次地震中的搖晃程度，幫助工程師決定該對 20 層樓還是 5 層樓加強阻尼器。",
-                    taiwan: "921 後台灣實施了全球最嚴格的耐震外審制度之一。403 花蓮地震顯示，正確的工程建模能有效防止結構發生脆性破裂。",
+                    taiwan: "921 後台灣實施了全球最嚴格的耐震外審制度之一. 403 花蓮地震顯示，正確的工程建模能有效防止結構發生脆性破裂。",
                     animationType: "engineering_shake"
                 },
                 {
                     title: "重點#9：土壤液化 (Liquefaction)",
                     icon: "flask-conical",
                     def: "飽和疏鬆砂土受震使孔隙水壓升高，導致支撐力歸零，土壤呈流體化現象。",
-                    why: "會導致地基翻覆。這是地震學中固態地表轉換為流體行為的物理臨界現象。",
-                    logic: "科學建模基礎：有效應力 \u003D 總應力 - 孔隙水壓。強震動使水壓激增，將砂粒撐開並懸浮，有效應力歸零後，地盤失去承載力。土壤從固體轉為液體性狀。",
-                    teacher: "「液化可以預防嗎？」答：可以。關鍵在於地盤改良。透過密實砂層或設置排水樁降低孔隙水壓積累，即可消除液化發生的物理條件。",
-                    taiwan: "2016 美濃地震台南災區發生大面積噴砂與房屋沉陷。現已有官方查詢系統，提醒民眾避開高液化潛勢的「脆弱土地」。",
+                    why: "會導致地基翻覆. 這是地震學中固態地表轉換為流體行為的物理臨界現象。",
+                    logic: "科學建模基礎：有效應力 \u003D 總應力 - 孔隙水壓. 強震動使水壓激增，將砂粒撐開並懸浮，有效應力歸零後，地盤失去承載力。土壤從固體轉為液體性狀。",
+                    teacher: "「液化可以預防嗎？」答：可以. 關鍵在於地盤改良. 透過密實砂層或設置排水樁降低孔隙水壓積累，即可消除液化發生的物理條件。",
+                    taiwan: "2016 美濃地震台南災區發生大面積噴砂與房屋沉陷. 現已有官方查詢系統，提醒民眾避開高液化潛勢的「脆弱土地」。",
                     animationType: "liquefaction_sim"
                 },
                 {
                     title: "重點#10：海嘯與次生災害",
                     icon: "map",
                     def: "海底大地震垂直位移引發的長週期重力波，波長可達數百公里。",
-                    why: "海嘯具有跨洋破壞力。次生災害（海嘯、火災、山崩）造成的二次損失常遠超地震震動本身。",
-                    logic: "科學建模基礎：波速遵循 v \u003D \u221A(g \u22C5 h)。深海波速與噴射機相當（約 700-800 km/h），近岸水淺時速度驟減，波長縮短，波高急劇堆疊成水牆。",
-                    teacher: "「為什麼有的海底大地震沒海嘯？」答：關鍵在於斷層型態。必須有顯著的垂直位移（如逆斷層）才能擾動整根水柱。平移斷層產生的垂直位移微小，不易引發大規模海嘯。",
-                    taiwan: "台灣北部與東南海域的海溝地震具海嘯潛勢。基隆與東北角已建立監測浮標與避難指引，預防這種高能量次生災害。",
+                    why: "海嘯具有跨洋破壞力. 次生災害（海嘯、火災、山崩）造成的二次損失常遠超地震震動本身。",
+                    logic: "科學建模基礎：波速遵循 v \u003D \u221A(g \u22C5 h). 深海波速與噴射機相當（約 700-800 km/h），近岸水淺時速度驟減，波長縮短，波高急劇堆疊成水牆。",
+                    teacher: "「為什麼有的海底大地震沒海嘯？」答：關鍵在於斷層型態. 必須有顯著的垂直位移（如逆斷層）才能擾動整根水柱. 平移斷層產生的垂直位移微小，不易引發大規模海嘯。",
+                    taiwan: "台灣北部與東南海域的海溝地震具海嘯潛勢. 基隆與東北角已建立監測浮標與避難指引，預防這種高能量次生災害。",
                     animationType: "tsunami_wall"
                 },
                 {
                     title: "重點#11：地震預報 (Forecasting)",
                     icon: "search",
-                    def: "對未來一段時間內發震機率的科學評估。它是具統計意義的預判。",
+                    def: "對未來一段時間內發震機率的科學評估. 它是具統計意義的預判。",
                     why: "認清科學目前無法做到精準「預測」，避免偽科學誤導，將資源投入實用且具機率基礎的防災設計。",
-                    logic: "科學建模基礎：基於歷史再現週期。因斷層破裂是高度非線性且混沌 (Chaos) 的物理過程，地底微小擾動就會導致結果巨變，目前技術尚無法掌握瞬間發震時機。",
-                    teacher: "「預報與預測有何不同？」答：預報是說「這三十年有 70% 機率」，屬於機率性的；預測是說「明天下午兩點在花蓮」，屬於確定性的。目前只有預報是成熟科學。",
-                    taiwan: "中研院發布的長期發震機率圖，預告南台灣未來發生大震機率偏高。這是「預報」，提醒政府優先補強當地的民生基礎設施。",
+                    logic: "科學建模基礎：基於歷史再現週期. 因斷層破裂是高度非線性且混沌 (Chaos) 的物理過程，地底微小擾動就會導致結果巨變，目前技術尚無法掌握瞬間發震時機。",
+                    teacher: "「預報與預測有何不同？」答：預報是說「這三十年有 70% 機率」，屬於機率性的；預測是說「明天下午兩點在花蓮」，屬於確定性的. 目前只有預報是成熟科學。",
+                    taiwan: "中研院發布的長期發震機率圖，預告南台灣未來發生大震機率偏高. 這是「預報」，提醒政府優先補強當地的民生基礎設施。",
                     animationType: "forecasting_clock"
                 },
                 {
                     title: "重點#12：核武監測——和平守衛",
                     icon: "shield-check",
-                    def: "利用波相指紋（mb / Ms 比例）區分地下爆炸與天然地震的法制科學。",
-                    why: "確保《全面禁止核試驗條約》(CTBT) 的落實。地震儀是核子時代維護世界和平的執法者。",
-                    logic: "科學建模基礎：判別物理在於 mb (體波規模) 與 Ms (表面波規模) 的比例。爆炸是中心對稱膨脹源，激發 P波強但 S波極弱；天然地震為剪力源，產生的表面波顯著較強。",
+                    def: "利用波相指紋區分地下爆炸與天然地震的法制科學。",
+                    why: "確保《全面禁止核試驗條約》(CTBT) 的落實. 地震儀是核子時代維護世界和平的執法者。",
+                    logic: "科學建模基礎：判別物理在於 mb (體波規模) 與 Ms (表面波規模) 的比例. 爆炸是膨脹源，激發 P波強但 S波極弱；天然地震為剪力源，產生的表面波顯著較強。",
                     teacher: "「如何抓到秘密核試？」答：如果測站錄到 mb \u226B Ms (mb 遠大於 Ms)，且全方位初動極性皆為「向上」，這就是典型爆炸而非斷層地震的物理證據。",
                     taiwan: "北韓歷次核武試驗，台灣氣象署的觀測站都能錄到極清晰的「膨脹型」初動訊號，迅速與全球 IMS 數據比對確認。",
                     animationType: "nuclear_sim"
@@ -182,7 +372,7 @@
                     icon: "radio",
                     def: "結合地震、水聲、次聲與核種技術的全球 24 小時全方位監測網。",
                     why: "確保全球任何角落（地下、水下、大氣）的秘密核試都無法逃過國際法規的眼目。",
-                    logic: "科學建模基礎：次聲波（頻率 \u003C 20Hz）在大氣傳播衰減極慢。與地震網絡聯動，可定位全球任何位置的異常能量釋放，包括隕石撞擊與火山噴發。",
+                    logic: "科學建模基礎：次聲波（頻率 \u003C 20Hz）在大氣傳播衰減極慢. 與地震網絡聯動，可定位全球任何位置的異常能量釋放，包括隕石撞擊與火山噴發。",
                     teacher: "「次聲波為什麼厲害？」答：它的波長極長（幾十公尺以上），不受一般障礙物阻擋，能在大氣層中傳播數千公里，是偵測空中爆炸與超大火山爆發的利器。",
                     taiwan: "台灣學界積極建立次聲波觀測網，曾精確紀錄東加火山噴發產生的波動繞行地球兩圈的微小氣壓訊號。",
                     animationType: "ims_network"
@@ -190,8 +380,7 @@
             ];
 
             return (
-                <div className="flex flex-col h-screen overflow-hidden" key="app-main">
-                    {/* Header */}
+                <div className="flex flex-col h-screen overflow-hidden">
                     <header className="bg-slate-900 text-white p-5 shadow-xl border-b-4 border-emerald-500 shrink-0 z-20">
                         <div className="max-w-full mx-auto flex justify-between items-center px-4">
                             <div className="flex items-center gap-4">
@@ -202,18 +391,17 @@
                                     <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">
                                         Seismology <span className="text-emerald-400 font-light italic">Master</span>
                                     </h1>
-                                    <p className="text-[11px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">地震學助教筆記 · 從 0 到 1 專業模型</p>
+                                    <p className="text-[11px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">地震學助教筆記 · 專業模型整合版</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">自動模擬 · V3.4 修復版</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">自動模擬 · V3.9 旗艦修正版</span>
                             </div>
                         </div>
                     </header>
 
                     <div className="flex flex-1 overflow-hidden">
-                        {/* Sidebar */}
                         <nav className="w-80 bg-white border-r border-slate-200 overflow-y-auto p-4 shrink-0 shadow-sm scrollbar-thin">
                             <div className="flex items-center gap-2 mb-6 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
                                 <Icon name="layers" size={16} className="text-emerald-500" />
@@ -237,10 +425,8 @@
                             </div>
                         </nav>
 
-                        {/* Main Content */}
                         <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-12">
                             <div className="max-w-4xl mx-auto space-y-12" key={activePoint}>
-                                {/* Title */}
                                 <div className="border-b-4 border-slate-200 pb-10 flex justify-between items-end relative">
                                     <div className="z-10">
                                         <span className="text-emerald-500 text-xs font-black uppercase tracking-widest bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100">Teaching Assistant Note</span>
@@ -251,7 +437,6 @@
                                     </div>
                                 </div>
 
-                                {/* Animation Canvas */}
                                 <div className="bg-slate-900 rounded-[3rem] p-12 shadow-2xl relative overflow-hidden border-4 border-slate-800">
                                     <div className="absolute top-8 left-10 z-10 flex items-center gap-3">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse"></div>
@@ -266,25 +451,49 @@
                                     </div>
                                 </div>
 
-                                {/* Knowledge Cards */}
                                 <div className="grid grid-cols-1 gap-10">
                                     <div className="bg-white p-12 rounded-[3rem] shadow-sm border border-slate-200 hover:shadow-xl transition-all duration-500">
                                         <div className="flex items-center gap-4 mb-10">
                                             <div className="w-12 h-12 rounded-3xl bg-emerald-500 flex items-center justify-center text-white shadow-lg"><Icon name="book-open" size={24}/></div>
-                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">定義與價值</h3>
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight tracking-wide">學術定義與基礎</h3>
                                         </div>
                                         <div className="space-y-12">
                                             <div className="bg-slate-50 p-8 rounded-[2rem] border-l-8 border-emerald-500 shadow-inner">
                                                 <h4 className="text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">一句話精準定義</h4>
                                                 <p className="text-xl font-bold text-slate-800 leading-relaxed">{points[activePoint].def}</p>
                                             </div>
+                                            
+                                            {points[activePoint].images && (
+                                                <div className="my-10 space-y-10">
+                                                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b pb-4">震波路徑與波相特徵對比</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                        {points[activePoint].images.map((img, i) => (
+                                                            <div key={i} className="flex flex-col gap-4">
+                                                                <div className="rounded-2xl overflow-hidden border-4 border-slate-100 shadow-lg bg-white p-2 hover:border-emerald-200 transition-colors duration-300">
+                                                                    <img src={img.url} alt={img.caption} className="w-full h-48 object-contain" />
+                                                                </div>
+                                                                <p className="text-[10px] text-slate-500 leading-relaxed font-medium bg-slate-50 p-3 rounded-xl border border-dashed h-24 overflow-y-auto">
+                                                                    {img.caption}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="p-6 bg-emerald-50 rounded-3xl border-2 border-emerald-100 shadow-inner">
+                                                        <h5 className="text-xs font-black text-emerald-800 mb-2 uppercase tracking-widest underline">物理機制與觀測量解析 (Unicode)</h5>
+                                                        <p className="text-xs text-emerald-700 leading-loose">
+                                                            這兩張圖表呈現了地震波從「地球內部傳播」到「地表儀器紀錄」的全貌。圖(一)描述了能量路徑：震波遇到地函界面時，不僅發生反射 (Reflection)，還伴隨能量的相變轉換 (Conversion)，這是地球內部分層探測的基礎。圖(二)則展示了觀測結果：根據波速順序 (Vp \u003E Vs \u003E Vsurface)，P 波與 S 波先行抵達。表面波雖然到時最晚，但因波長最長且能量被導引在地表層，其振幅能量通常最大，是造成都市強地動危害的主因。
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                                 <div>
                                                     <h4 className="text-[11px] font-black text-emerald-600 uppercase mb-4 tracking-widest">為什麼重要</h4>
                                                     <p className="text-[15px] text-slate-600 leading-relaxed font-medium">{points[activePoint].why}</p>
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-[11px] font-black text-indigo-600 uppercase mb-4 tracking-widest">科學建模與基礎</h4>
+                                                    <h4 className="text-[11px] font-black text-indigo-600 uppercase mb-4 tracking-widest">科學建模與基礎 (Unicode)</h4>
                                                     <p className="text-[15px] text-slate-600 italic leading-relaxed font-medium bg-indigo-50/30 p-4 rounded-2xl whitespace-pre-wrap">{points[activePoint].logic}</p>
                                                 </div>
                                             </div>
@@ -296,7 +505,7 @@
                                         <div className="relative z-10 space-y-12">
                                             <div className="flex items-center gap-4 mb-2">
                                                 <div className="w-12 h-12 rounded-3xl bg-amber-500 flex items-center justify-center text-white shadow-lg"><Icon name="help-circle" size={24}/></div>
-                                                <h3 className="text-2xl font-black text-white tracking-tight">應試追問</h3>
+                                                <h3 className="text-2xl font-black text-white tracking-tight tracking-wide">應試追問</h3>
                                             </div>
                                             <div className="p-10 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
                                                 <h4 className="text-[11px] font-black text-amber-400 uppercase mb-6 tracking-widest flex items-center gap-2">
@@ -314,7 +523,6 @@
                                     </div>
                                 </div>
 
-                                {/* Footer Navigation */}
                                 <div className="flex justify-between items-center py-16 border-t-2 border-slate-200">
                                     <button 
                                         disabled={activePoint === 0}
@@ -337,208 +545,6 @@
                             </div>
                         </main>
                     </div>
-                </div>
-            );
-        };
-
-        // --- Animations Engine Components ---
-        const VisualSim = ({ type, waveType, setWaveType }) => {
-            switch (type) {
-                case 'spirit': return (
-                    <div className="relative w-64 h-64 bg-slate-800 rounded-full flex items-center justify-center border-4 border-slate-700">
-                        <div className="absolute inset-2 border-2 border-dashed border-emerald-500/20 rounded-full animate-[spirit-rotate_20s_linear_infinite]"></div>
-                        <div className="text-emerald-400 animate-[float-y_4s_ease-in-out_infinite]">
-                            <Icon name="globe" size={100} />
-                        </div>
-                    </div>
-                );
-                case 'wave_dynamic': return (
-                    <div className="w-full flex flex-col items-center">
-                        <WaveProp type={waveType} />
-                        <div className="flex gap-4 mt-8 bg-slate-800/80 p-2 rounded-full border border-slate-700 shadow-2xl">
-                            {['p', 's', 'rayleigh'].map(t => (
-                                <button key={t} onClick={() => setWaveType(t)} className={`px-6 py-1.5 rounded-full text-[9px] font-black uppercase transition-all ${waveType === t ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500'}`}>{t}</button>
-                            ))}
-                        </div>
-                    </div>
-                );
-                case 'smr_flow': return (
-                    <div className="flex items-center gap-12 relative">
-                        <div className="flex flex-col items-center gap-3">
-                            <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="zap" className="text-white"/></div>
-                            <span className="text-[10px] text-slate-400 font-black">S</span>
-                        </div>
-                        <div className="w-24 h-1 bg-slate-700 relative overflow-hidden rounded-full"><div className="absolute h-full w-full bg-emerald-500 animate-[scan-line_2s_linear_infinite]"></div></div>
-                        <div className="flex flex-col items-center gap-3">
-                            <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="layers" className="text-white"/></div>
-                            <span className="text-[10px] text-slate-400 font-black">M</span>
-                        </div>
-                        <div className="w-24 h-1 bg-slate-700 relative overflow-hidden rounded-full"><div className="absolute h-full w-full bg-blue-500 animate-[scan-line_2s_linear_infinite_1s]"></div></div>
-                        <div className="flex flex-col items-center gap-3">
-                            <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center shadow-lg"><Icon name="activity" className="text-white"/></div>
-                            <span className="text-[10px] text-slate-400 font-black">R</span>
-                        </div>
-                    </div>
-                );
-                case 'depth_compare': return (
-                    <div className="flex items-center gap-12">
-                        <div className="h-64 w-10 bg-slate-800 rounded-full relative border-4 border-slate-700 overflow-hidden shadow-inner">
-                            <div className="absolute top-0 w-full h-[6%] bg-orange-500"></div>
-                            <div className="absolute top-[3%] left-1/2 -translate-x-1/2 w-0.5 h-14 bg-white shadow-[0_0_10px_white] animate-[drill-drill_2s_ease-in-out_infinite]"></div>
-                            <div className="absolute bottom-2 left-0 w-full text-center text-[7px] text-slate-500 font-black">6371KM</div>
-                        </div>
-                        <div className="space-y-4 text-left">
-                            <div className="flex items-center gap-3"><div className="w-4 h-4 bg-orange-500 rounded shadow-lg"></div><span className="text-xs text-slate-200 font-black uppercase">Drill (13km)</span></div>
-                            <div className="flex items-center gap-3"><div className="w-4 h-4 bg-emerald-500 rounded shadow-[0_0_10px_#10b981] animate-pulse"></div><span className="text-xs text-emerald-400 font-black uppercase">Scan (6371km)</span></div>
-                        </div>
-                    </div>
-                );
-                case 'inversion_box': return (
-                    <div className="w-56 h-56 bg-slate-800 rounded-[2.5rem] border-4 border-dashed border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
-                        <div className="text-emerald-500 animate-[float-y_4s_ease-in-out_infinite]">
-                            <Icon name="binary" size={80} />
-                        </div>
-                        <div className="absolute top-4 left-4 bg-slate-900/80 px-2 py-1 rounded text-[7px] text-slate-500 font-black uppercase">Data In</div>
-                        <div className="absolute bottom-4 right-4 bg-emerald-900/50 px-2 py-1 rounded text-[7px] text-emerald-400 font-black border border-emerald-500/20 uppercase">Model Out</div>
-                    </div>
-                );
-                case 'hazard_bell': return (
-                    <svg width="400" height="200" viewBox="0 0 400 200">
-                        <path d="M20 180 Q 200 20, 380 180" fill="none" stroke="#f87171" strokeWidth="4" strokeDasharray="10 5" className="animate-[dash-flow_5s_linear_infinite]" />
-                        <line x1="200" y1="180" x2="200" y2="40" stroke="#fff" strokeWidth="2" strokeDasharray="3 3" opacity="0.4" />
-                        <circle cx="200" cy="180" r="5" fill="#fff" />
-                        <text x="210" y="60" fill="#f87171" fontSize="12" fontWeight="black" className="animate-[float-y_2s_ease-in-out_infinite]">PEAK HAZARD</text>
-                        <rect x="0" y="180" width="400" height="2" fill="#334155" />
-                    </svg>
-                );
-                case 'risk_balance': return (
-                    <div className="flex flex-col items-center gap-10 animate-[sway-anim_4s_ease-in-out_infinite]">
-                        <svg width="300" height="120" viewBox="0 0 300 120">
-                            <line x1="20" y1="90" x2="280" y2="90" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
-                            <rect x="30" y="40" width="80" height="50" fill="#ef4444" rx="15" />
-                            <text x="40" y="70" fill="#fff" fontSize="11" fontWeight="black">HAZARD</text>
-                            <rect x="190" y="40" width="80" height="50" fill="#10b981" rx="15" />
-                            <text x="195" y="70" fill="#fff" fontSize="9" fontWeight="black">PROTECTION</text>
-                            <circle cx="150" cy="90" r="12" fill="#475569" />
-                        </svg>
-                    </div>
-                );
-                case 'engineering_shake': return (
-                    <div className="flex flex-col items-center gap-8">
-                        <div className="relative w-24 h-48 border-x-4 border-t-4 border-slate-600 rounded-t-3xl bg-slate-800/30 flex items-center justify-center animate-[sway-anim_1s_ease-in-out_infinite]" style={{ transformOrigin: 'bottom' }}>
-                            <div className="w-16 h-0.5 bg-slate-700 rounded-full opacity-30"></div>
-                            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                                <line x1="0" y1="30" x2="100" y2="30" stroke="#10b981" strokeWidth="2" opacity="0.3" />
-                            </svg>
-                        </div>
-                        <div className="w-48 h-3 bg-slate-700 rounded-full shadow-inner"></div>
-                    </div>
-                );
-                case 'liquefaction_sim': return (
-                    <div className="flex flex-col items-center">
-                        <svg width="400" height="200" viewBox="0 0 400 200">
-                            <rect x="50" y="50" width="300" height="130" fill="#451a03" opacity="0.2" rx="25" />
-                            {[...Array(80)].map((_, i) => (
-                                <circle key={i} cx={75 + (i%16)*18} cy={70 + Math.floor(i/16)*22} r={4} fill="#fbbf24" 
-                                    className="animate-[sand-shimmer_1.5s_ease-in-out_infinite]"
-                                    style={{ animationDelay: `${Math.random() * 2}s` }}
-                                />
-                            ))}
-                            <g className="animate-[house-collapse_3s_ease-in-out_infinite]" style={{ transformOrigin: '200px 100px' }}>
-                                <rect x="178" y="65" width="44" height="35" fill="#fff" stroke="#000" strokeWidth="2" />
-                                <path d="M178 65 L200 40 L222 65 Z" fill="#ef4444" stroke="#000" strokeWidth="2" />
-                            </g>
-                        </svg>
-                        <div className="mt-4 px-4 py-1.5 bg-amber-900/30 border border-amber-500/20 rounded-full">
-                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest">Effective Stress {'\u2192'} 0</p>
-                        </div>
-                    </div>
-                );
-                case 'tsunami_wall': return (
-                    <div className="relative w-80 h-40 bg-slate-800 rounded-[3rem] overflow-hidden border-4 border-slate-700 shadow-2xl flex items-end">
-                        <div className="w-full h-full bg-blue-600/20 relative">
-                            <div className="absolute bottom-0 w-full bg-blue-500 shadow-[0_-20px_40px_rgba(59,130,246,0.4)] animate-[tide-move_4s_ease-in-out_infinite]" style={{ height: '85%', transformOrigin: 'bottom' }}>
-                                <div className="w-full h-10 bg-white/20 backdrop-blur-sm"></div>
-                            </div>
-                        </div>
-                        <div className="absolute top-8 left-10 text-white font-black text-[10px] tracking-[0.5em] uppercase opacity-40">Tsunami Energy Wall</div>
-                    </div>
-                );
-                case 'forecasting_clock': return (
-                    <div className="relative w-56 h-56 rounded-full border-8 border-slate-700 bg-slate-800 shadow-[inset_0_0_50px_rgba(0,0,0,0.6)] flex items-center justify-center overflow-hidden">
-                        <div className="absolute w-1.5 h-24 bg-emerald-500 rounded-full origin-bottom shadow-[0_0_15px_#10b981] animate-[sway-anim_12s_linear_infinite]" style={{ top: '32px' }}></div>
-                        <div className="z-10 bg-slate-900/90 p-6 rounded-[2.5rem] border border-white/10 text-center">
-                            <div className="text-emerald-400 font-black text-xl leading-none">30Y / 70%</div>
-                            <div className="text-slate-500 font-bold text-[8px] uppercase tracking-widest mt-2">Probabilistic Model</div>
-                        </div>
-                    </div>
-                );
-                case 'nuclear_sim': return (
-                    <div className="w-80 h-64 bg-slate-800/80 rounded-[3.5rem] border-2 border-white/10 relative p-12 overflow-hidden shadow-2xl">
-                        <div className="absolute left-14 bottom-14 w-[75%] h-[2px] bg-slate-600"></div>
-                        <div className="absolute left-14 bottom-14 h-[75%] w-[2px] bg-slate-600"></div>
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                            <path d="M70 180 L250 50" stroke="#6366f1" strokeWidth="4" strokeDasharray="12 6" opacity="0.6" />
-                            <circle cx="110" cy="90" r="10" fill="#f87171" className="animate-pulse shadow-[0_0_20px_#f87171]" />
-                            <circle cx="210" cy="150" r="10" fill="#10b981" />
-                        </svg>
-                        <div className="absolute top-12 right-12 text-[8px] text-red-400 font-black bg-red-950/40 px-3 py-1.5 rounded-full border border-red-900/30 tracking-widest uppercase">mb {'\u226b'} Ms Fingerprint</div>
-                    </div>
-                );
-                case 'ims_network': return (
-                    <div className="w-72 h-72 relative bg-slate-800 rounded-full border-4 border-slate-700 flex items-center justify-center overflow-hidden">
-                        <div className="opacity-20"><Icon name="globe" size={130} /></div>
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            {[...Array(4)].map((_, i) => (
-                                <svg key={i} className="absolute inset-0 w-full h-full">
-                                    <circle cx="144" cy="144" r="10" fill="none" stroke="#10b981" strokeWidth={2.5}
-                                        className="animate-[pulse-ring_4s_linear_infinite]"
-                                        style={{ animationDelay: `${i*1}s` }}
-                                    />
-                                </svg>
-                            ))}
-                        </div>
-                        <div className="absolute top-12 right-12 text-emerald-400 drop-shadow-[0_0_15px_#10b981]"><Icon name="radio" size={32} className="animate-pulse" /></div>
-                        <div className="absolute bottom-12 left-12 text-blue-400 drop-shadow-[0_0_15px_#3b82f6]"><Icon name="wind" size={32} className="animate-pulse" /></div>
-                    </div>
-                );
-                default: return null;
-            }
-        };
-
-        const WaveProp = ({ type }) => {
-            const cols = 22;
-            const rows = 6;
-            let name = type === 'p' ? "waveP" : type === 's' ? "waveS" : "waveR";
-            let duration = type === 's' ? '1.8s' : '1.2s';
-
-            return (
-                <div className="w-full">
-                    <svg width="100%" height="180" viewBox="0 0 600 180" className="mx-auto overflow-visible">
-                        {[...Array(cols)].map((_, i) => (
-                            [...Array(rows)].map((_, j) => {
-                                const x = 50 + i * 24;
-                                const y = 35 + j * 24;
-                                const delay = i * 0.15; 
-                                return (
-                                    <circle 
-                                        key={`${i}-${j}`} 
-                                        cx={x} cy={y} 
-                                        r={j === 0 ? 5 : 2.5} 
-                                        fill={type === 'p' ? '#10b981' : type === 's' ? '#f87171' : '#60a5fa'} 
-                                        opacity={1 - j * 0.15}
-                                        style={{ 
-                                            animationName: name,
-                                            animationDuration: duration,
-                                            animationIterationCount: 'infinite',
-                                            animationTimingFunction: 'ease-in-out',
-                                            animationDelay: `${delay}s` 
-                                        }}
-                                    />
-                                );
-                            })
-                        ))}
-                    </svg>
                 </div>
             );
         };
